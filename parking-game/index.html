@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Play a 3D car parking game with 10 levels, police patrols, and two camera views.">
+<title>3D Car Parking — Police Patrol</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#090d1a;color:#fff}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+#hud{position:fixed;z-index:2;top:14px;left:14px;display:grid;grid-template-columns:repeat(2,minmax(115px,auto));gap:5px 15px;padding:13px 16px;background:#101a30da;border:1px solid #ffffff31;border-radius:16px;backdrop-filter:blur(8px);font-size:14px;box-shadow:0 5px 30px #0005}
+#hud strong{color:#aafac4}#alert{color:#ff9d9d;font-weight:800;grid-column:1/-1;display:none;letter-spacing:.1em}
+#help{position:fixed;z-index:2;right:14px;top:14px;background:#101a30da;border:1px solid #ffffff31;padding:10px 13px;border-radius:14px;font-size:12px;line-height:1.7;max-width:230px}
+#help kbd{background:#fff2;padding:1px 4px;border-radius:4px}
+#banner{position:fixed;top:23%;width:100%;z-index:3;text-align:center;font-size:clamp(20px,4vw,42px);font-weight:800;color:#aafac4;text-shadow:0 3px 12px #001a0d;pointer-events:none}
+#modal{position:fixed;inset:0;display:grid;place-items:center;background:#070d1cc9;z-index:8;padding:18px}
+.panel{width:min(92vw,465px);padding:27px;text-align:center;border-radius:22px;background:#15233bea;border:1px solid #7ba7ca88;box-shadow:0 20px 80px #0009}
+h1{margin:0 0 12px;font-size:clamp(26px,5vw,38px)}p{line-height:1.55;color:#d3e2f7}
+button{cursor:pointer;background:#aafac4;color:#102218;border:0;border-radius:12px;padding:12px 20px;font-weight:800;font-size:15px}
+button:focus-visible{outline:3px solid #ffd773;outline-offset:2px}
+#restart{position:fixed;z-index:3;bottom:14px;left:14px;background:#182841dd;color:#fff;border:1px solid #fff5;font-size:13px;padding:9px 13px}
+#touch{position:fixed;z-index:4;bottom:14px;right:14px;display:none;grid-template-columns:repeat(3,56px);gap:8px;user-select:none;-webkit-user-select:none}
+#touch button{padding:12px 0;background:#c9f6e4dd;touch-action:none;font-size:19px}
+#touch .wide{grid-column:span 2;font-size:12px}
+#notice{position:fixed;bottom:57px;left:14px;color:#c9d9ee;font-size:12px;z-index:2}
+@media(pointer:coarse){#touch{display:grid}#help{display:none}#restart{bottom:133px}#notice{bottom:168px}}
+@media(max-width:600px){#hud{font-size:12px;top:8px;left:8px;padding:9px 10px;grid-template-columns:repeat(2,minmax(90px,auto))}}
+</style>
+</head>
+<body>
+<div id="hud" aria-live="off"><span>LEVEL <strong id="level">1 / 10</strong></span><span>TIME <strong id="time">60.0s</strong></span><span>CRASHES <strong id="crashes">0 / 3</strong></span><span>SPEED <strong id="speed">0.0</strong></span><span>CAMERA <strong id="cam">3RD PERSON</strong></span><span id="cheat"></span><span id="alert">⚠ POLICE ALERT ⚠</span></div>
+<div id="help"><strong>Controls</strong><br><kbd>W</kbd>/<kbd>S</kbd> Drive · <kbd>A</kbd>/<kbd>D</kbd> Steer<br><kbd>X</kbd> Brake · <kbd>V</kbd> Camera<br><kbd>C</kbd> Cheat · <kbd>R</kbd> Restart<br>Right-click to switch camera</div>
+<div id="banner" role="status"></div>
+<button id="restart" type="button">↻ Restart</button>
+<div id="touch" aria-label="Touch driving controls"><button data-hold="A" aria-label="Steer left">◀</button><button data-hold="W" aria-label="Drive forward">▲</button><button data-hold="D" aria-label="Steer right">▶</button><button data-hold="S" aria-label="Reverse">▼</button><button data-hold="X" aria-label="Brake">■</button><button id="cameraButton" aria-label="Switch camera">CAM</button></div>
+<div id="notice">Park in the glowing green zone. Don't crash or get caught!</div>
+<div id="modal"><div class="panel"><h1 id="modalTitle">3D Car Parking 🚗</h1><p id="modalMessage">Find the green parking zone on each of 10 levels. Avoid obstacles and police patrols. You have 3 crashes and a timer per level. Desktop: W/S, A/D, X; mobile: on-screen controls.</p><button id="play" type="button">Start game</button><p style="font-size:12px">Browser version of the original Python/OpenGL project.</p></div></div>
+<noscript>This game needs JavaScript enabled.</noscript>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js";
+
+const W=80,D=80,CAR_LEN=4,CAR_WID=2,CAR_H=1.4,MAX_SPEED=14,ACCEL=6,BRAKE=10,FRICTION=3,STEER=70;
+const MAX_LEVELS=10,MAX_CRASHES=3,GAME_TIME=60,DETECT=22,POLICE_SPEED=7,CATCH_DIST=3,STOP_CATCH=1.2;
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const distance=(x,z)=>Math.hypot(x,z);
+const between=(a,b)=>a+Math.random()*(b-a);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x101a2b);scene.fog=new THREE.Fog(0x101a2b,95,250);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;
+document.body.insertBefore(renderer.domElement,document.body.firstChild);
+const camera=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.2,450);
+scene.add(new THREE.HemisphereLight(0xe2f5ff,0x283725,2.0));
+const sun=new THREE.DirectionalLight(0xfff5d4,2.3);sun.position.set(35,70,20);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-100;sun.shadow.camera.right=100;sun.shadow.camera.top=100;sun.shadow.camera.bottom=-100;sun.shadow.camera.near=.1;sun.shadow.camera.far=200;scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(160,160),new THREE.MeshStandardMaterial({color:0x333c45,roughness:.97}));
+ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+function mat(color,metalness=0){return new THREE.MeshStandardMaterial({color,roughness:.64,metalness})}
+const wallMat=mat(0x817f79),lineMat=mat(0xe4e7df),trunkMat=mat(0x765038),leafMat=mat(0x2c9352);
+function block(parent,w,h,d,color,x,y,z){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),typeof color==="number"?mat(color):color);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh}
+for(const [x,z,w,d] of [[0,-79,160,2],[0,79,160,2],[-79,0,2,160],[79,0,2,160]])block(scene,w,5,d,wallMat,x,2.5,z);
+for(const z of [-70,64]){for(let i=0;i<10;i++)block(scene,.15,.018,6,lineMat,-74+i*3.7,.025,z+3);
+block(scene,37,.018,.15,lineMat,-57.3,.025,z);block(scene,37,.018,.15,lineMat,-57.3,.025,z+6)}
+block(scene,.3,.019,140,mat(0xd4b743),0,.027,0);
+const pillars=[];for(const x of [-72,0,72])for(const z of [-72,0,72]){
+block(scene,1.2,6,1.2,wallMat,x,3,z);pillars.push({x,z,r:2})}
+for(let i=-3;i<=3;i++){block(scene,.3,.3,158,0x666a70,i*12,5.8,0);block(scene,158,.3,.3,0x666a70,0,5.8,i*12)}
+function tree(x,z,parent){const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
+const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.25,.25,2.2,8),trunkMat);trunk.position.y=1.1;g.add(trunk);
+for(let i=0;i<3;i++){const c=new THREE.Mesh(new THREE.ConeGeometry(1.4-i*.35,1.6,10),leafMat);c.position.y=2.2+i*.8;c.castShadow=true;g.add(c)}return g}
+const treePositions=[];for(const [x,z] of [[-75,-75],[75,-75],[-75,75],[75,75]])treePositions.push({x,z,r:1.5});
+for(let i=-2;i<=2;i++){treePositions.push({x:i*20,z:-77,r:1.5},{x:i*20,z:77,r:1.5})}
+for(const [x,z] of [[-55,0],[55,0],[-55,30],[55,-30],[-55,-30],[55,30]])treePositions.push({x,z,r:1.5});
+const scenery=new THREE.Group();scene.add(scenery);treePositions.forEach(t=>tree(t.x,t.z,scenery));
+function car(color,police=false){const g=new THREE.Group();const body=mat(color,.12);
+block(g,2,.98,4,body,0,.68,0);block(g,1.68,.77,2.45,police?0xf3f4f6:body,0,1.43,-.2);
+block(g,1.52,.42,.06,0x243b57,0,1.45,1.12);block(g,1.52,.42,.06,0x243b57,0,1.45,-1.5);
+for(const side of [-1,1])for(const z of [-1.32,1.28]){
+const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.22,12),mat(0x17191f));wheel.rotation.z=Math.PI/2;wheel.position.set(side*1.06,.4,z);wheel.castShadow=true;g.add(wheel)}
+for(const side of [-1,1]){block(g,.28,.17,.09,0xfff4ab,side*.7,.55,2.02);block(g,.28,.17,.09,0xfe4444,side*.7,.55,-2.02)}
+if(police){block(g,.8,.13,.34,0x202739,0,2.02,-.1);g.userData.red=block(g,.37,.19,.32,0xff1313,-.22,2.19,-.1);
+g.userData.blue=block(g,.37,.19,.32,0x2455ff,.22,2.19,-.1)}
+return g}
+const player={x:0,z:65,angle:180,speed:0,stop:0},playerMesh=car(0xf6d834);scene.add(playerMesh);
+const levelGroup=new THREE.Group();scene.add(levelGroup);
+const zoneGroup=new THREE.Group();scene.add(zoneGroup);
+const zoneMat=new THREE.MeshBasicMaterial({color:0x00bb3a,transparent:true,opacity:.47,side:THREE.DoubleSide,depthWrite:false});
+const zone=new THREE.Mesh(new THREE.PlaneGeometry(5.6,8.8),zoneMat);zone.rotation.x=-Math.PI/2;zone.position.y=.09;zoneGroup.add(zone);
+const zoneEdges=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(5.6,.02,8.8)),new THREE.LineBasicMaterial({color:0x55ff75}));zoneEdges.position.y=.12;zoneGroup.add(zoneEdges);
+const arrow=new THREE.Mesh(new THREE.ConeGeometry(.6,1.8,3),new THREE.MeshBasicMaterial({color:0xffd126}));arrow.rotation.x=Math.PI/2;arrow.position.y=.14;zoneGroup.add(arrow);
+let parked=[],obstacles=[],cops=[],zonePos={x:0,z:0},level=1,timeLeft=60,crashes=0,crashCooldown=0,flashUntil=0,winCooldown=0;
+let started=false,finished=false,cheat=false,firstPerson=false,anyChasing=false,alertTimer=0,levelReady=false,clock=performance.now();
+const keys={W:false,S:false,A:false,D:false,X:false};
+function place(obj){obj.mesh.position.set(obj.x,0,obj.z);obj.mesh.rotation.y=obj.angle*Math.PI/180}
+function chooseZone(){for(let i=0;i<300;i++){const x=between(-66,66),z=between(-66,66);
+if(distance(x,z-65)<22)continue;if(pillars.some(p=>distance(x-p.x,z-p.z)<7))continue;return{x,z}}
+return{x:-30,z:-30}}
+function initLevel(){levelGroup.clear();parked=[];obstacles=[];cops=[];zonePos=chooseZone();zoneGroup.position.set(zonePos.x,0,zonePos.z);
+player.x=0;player.z=65;player.angle=180;player.speed=0;player.stop=0;cheat=false;timeLeft=GAME_TIME+(level-1)*10;crashes=0;crashCooldown=0;
+const colors=[0xd43a36,0x2551d5,0x2cb750,0xe5a22d,0x962fd0,0xbab52b];
+for(let row=0;row<2;row++)for(let s=0;s<8;s++){const x=-74+s*3.7,z=row===0?-67:67;
+if(distance(x-zonePos.x,z-zonePos.z)<8)continue;
+const obj={x,z,angle:row===0?0:180,mesh:car(colors[(s+row*8)%colors.length])};parked.push(obj);levelGroup.add(obj.mesh);place(obj)}
+for(const [x,z,a,c] of [[-45,5,90,0xe64d19],[45,-5,90,0x2580eb],[-50,40,0,0x49c74a],[50,-40,0,0xceca25],[-30,0,45,0xa32fbb],[30,0,135,0x43d5d5]]){
+if(distance(x-zonePos.x,z-zonePos.z)<=8)continue;
+const obj={x,z,angle:a,mesh:car(c)};parked.push(obj);levelGroup.add(obj.mesh);place(obj)}
+const poolA=[[-20,10],[20,-10],[10,40],[-10,-40],[50,20],[-50,-20],[35,-55],[-35,55],[0,30],[0,-30],[30,0],[-30,0],[45,-40],[-45,40],[20,55],[-20,-55]];
+const poolB=[[0,20],[-15,-20],[25,35],[-25,-35],[40,0],[-40,0],[15,-50],[-15,50],[10,-20],[-10,20],[35,20],[-35,-20],[55,-10],[-55,10],[5,50],[-5,-50]];
+const positions=poolA.slice(0,Math.min(level*3,poolA.length)).concat(poolB.slice(0,Math.max(0,Math.min((level-5)*3,poolB.length))));
+for(const [x,z] of positions){if(distance(x-zonePos.x,z-zonePos.z)<=7||distance(x,z-65)<=6)continue;
+const mesh=block(levelGroup,3,2,3,0x85817b,x,1,z);block(levelGroup,3.1,.24,3.1,0xe77922,x,2.1,z);obstacles.push({x,z,r:2.2,mesh})}
+for(let i=0;i<3;i++){const a=i*2*Math.PI/3,obj={x:Math.cos(a)*30,z:Math.sin(a)*30,angle:i*120+90,chasing:false,
+target:{x:between(-70,70),z:between(-70,70)},light:i*.5,mesh:car(0x14171d,true)};
+cops.push(obj);levelGroup.add(obj.mesh);place(obj)}
+playerMesh.material=playerMesh.material;levelReady=true;refreshHud()}
+function crash(){player.speed*=-.5;if(crashCooldown<=0){crashes++;crashCooldown=.8}}
+function advance(){level++;if(level>MAX_LEVELS){finished=true;showModal("You win! 🏆","You parked on every level. Press Play again to restart.","Play again");return}
+flashUntil=performance.now()+2400;winCooldown=2.5;initLevel()}
+function end(message){finished=true;showModal("Game over",message,"Play again")}
+function step(dt){if(!levelReady||!started||finished)return;
+timeLeft-=dt;crashCooldown-=dt;winCooldown=Math.max(0,winCooldown-dt);
+if(keys.W)player.speed=Math.min(player.speed+ACCEL*dt,MAX_SPEED);
+if(keys.S)player.speed=Math.max(player.speed-ACCEL*dt,-MAX_SPEED*.6);
+if(keys.X){player.speed=player.speed>0?Math.max(0,player.speed-BRAKE*dt):Math.min(0,player.speed+BRAKE*dt)}
+if(!keys.W&&!keys.S&&!keys.X){if(Math.abs(player.speed)<.05)player.speed=0;
+else player.speed-=Math.sign(player.speed)*Math.min(Math.abs(player.speed),FRICTION*dt)}
+player.stop=Math.abs(player.speed)<.05?player.stop+dt:0;
+const sf=clamp(Math.abs(player.speed)/MAX_SPEED,.2,1),rv=player.speed>=0?1:-1;
+if(keys.A)player.angle+=STEER*sf*dt*rv;if(keys.D)player.angle-=STEER*sf*dt*rv;
+const rad=player.angle*Math.PI/180,oldX=player.x,oldZ=player.z;
+player.x+=Math.sin(rad)*player.speed*dt;player.z+=Math.cos(rad)*player.speed*dt;
+let collided=false;
+if(Math.abs(player.x)>W-CAR_LEN){player.x=clamp(player.x,-W+CAR_LEN,W-CAR_LEN);collided=true}
+if(Math.abs(player.z)>D-CAR_LEN){player.z=clamp(player.z,-D+CAR_LEN,D-CAR_LEN);collided=true}
+if(parked.some(c=>distance(player.x-c.x,player.z-c.z)<3.45)||pillars.some(p=>distance(player.x-p.x,player.z-p.z)<p.r)||
+obstacles.some(o=>distance(player.x-o.x,player.z-o.z)<o.r)||treePositions.some(t=>distance(player.x-t.x,player.z-t.z)<t.r)){collided=true}
+if(collided){player.x=oldX;player.z=oldZ;crash()}
+if(winCooldown<=0&&Math.abs(player.x-zonePos.x)<2.8&&Math.abs(player.z-zonePos.z)<4.4){advance();return}
+if(crashes>=MAX_CRASHES){end("You reached the crash limit. Try the parking route again.");return}
+if(timeLeft<=0){end("Time ran out. Try again!");return}
+anyChasing=false;
+for(const cop of cops){cop.light+=dt;
+const d=distance(player.x-cop.x,player.z-cop.z);
+if(cheat)cop.chasing=false;else if(d<DETECT)cop.chasing=true;else if(d>DETECT*1.8)cop.chasing=false;
+let target=cop.target;
+if(cop.chasing){anyChasing=true;target=player}
+else if(distance(cop.target.x-cop.x,cop.target.z-cop.z)<4){cop.target={x:between(-68,68),z:between(-68,68)};target=cop.target}
+const desired=Math.atan2(target.x-cop.x,target.z-cop.z)*180/Math.PI;
+let delta=((desired-cop.angle+540)%360)-180;
+cop.angle+=clamp(delta,-(cop.chasing?180:90)*dt,(cop.chasing?180:90)*dt);
+const a=cop.angle*Math.PI/180,spd=POLICE_SPEED*(cop.chasing?1:.6);
+cop.x=clamp(cop.x+Math.sin(a)*spd*dt,-77,77);cop.z=clamp(cop.z+Math.cos(a)*spd*dt,-77,77);
+place(cop);cop.mesh.userData.red.material.color.setHex(Math.sin(cop.light*8)>0?0xff1919:0x4e1010);
+cop.mesh.userData.blue.material.color.setHex(Math.sin(cop.light*8)<0?0x255dff:0x111955);
+if(cop.chasing&&d<CATCH_DIST&&!cheat&&player.stop>=STOP_CATCH){end("A police patrol caught your stopped car.");return}}
+alertTimer=anyChasing?alertTimer+dt:0}
+function refreshHud(){if(!levelReady)return;
+$("level").textContent=level+" / "+MAX_LEVELS;$("time").textContent=Math.max(0,timeLeft).toFixed(1)+"s";
+$("crashes").textContent=crashes+" / "+MAX_CRASHES;$("speed").textContent=Math.abs(player.speed).toFixed(1);
+$("cam").textContent=firstPerson?"1ST PERSON":"3RD PERSON";$("cheat").textContent=cheat?"CHEAT ON":"";
+$("alert").style.display=anyChasing?"inline":"none"}
+function showModal(title,message,label){started=false;$("modalTitle").textContent=title;$("modalMessage").textContent=message;$("play").textContent=label;$("modal").style.display="grid";for(const key in keys)keys[key]=false}
+function start(){if(!levelReady||finished){level=1;finished=false;winCooldown=0;flashUntil=0;initLevel()}
+started=true;clock=performance.now();$("modal").style.display="none"}
+$("play").addEventListener("click",start);
+$("restart").addEventListener("click",()=>{finished=true;start()});
+$("cameraButton").addEventListener("click",()=>{firstPerson=!firstPerson;refreshHud()});
+document.addEventListener("keydown",e=>{const k=e.key.toUpperCase();if(["W","A","S","D","X","C","R","V"," "].includes(k))e.preventDefault();
+if(k in keys)keys[k]=true;else if(k==="C"&&started)cheat=!cheat;else if(k==="R"){finished=true;start()}
+else if(k==="V")firstPerson=!firstPerson;else if(k===" "&&!started)start()});
+document.addEventListener("keyup",e=>{const k=e.key.toUpperCase();if(k in keys)keys[k]=false});
+document.addEventListener("contextmenu",e=>{e.preventDefault();firstPerson=!firstPerson});
+window.addEventListener("blur",()=>{for(const k in keys)keys[k]=false});
+for(const b of document.querySelectorAll("[data-hold]")){const k=b.dataset.hold;
+b.addEventListener("pointerdown",e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys[k]=true});
+for(const t of ["pointerup","pointercancel","lostpointercapture"])b.addEventListener(t,()=>keys[k]=false)}
+window.addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+let hudTick=0;
+function frame(now){requestAnimationFrame(frame);const dt=Math.min((now-clock)/1000,.05);clock=now;step(Math.max(0,dt));
+playerMesh.position.set(player.x,0,player.z);playerMesh.rotation.y=player.angle*Math.PI/180;playerMesh.visible=!firstPerson;
+const yaw=player.angle*Math.PI/180;
+if(firstPerson){camera.position.set(player.x+Math.sin(yaw)*1.52,1.9,player.z+Math.cos(yaw)*1.52);
+camera.lookAt(player.x+Math.sin(yaw)*23,1.35,player.z+Math.cos(yaw)*23)}
+else{camera.position.set(player.x-Math.sin(yaw)*17,11,player.z-Math.cos(yaw)*17);camera.lookAt(player.x,1.1,player.z)}
+zoneMat.opacity=.48+.20*Math.sin(now*.003);
+$("banner").textContent=started&&now<flashUntil?"LEVEL "+(level-1)+" COMPLETE!":"";
+hudTick+=dt;if(hudTick>.09){hudTick=0;refreshHud()}
+renderer.render(scene,camera)}
+initLevel();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
