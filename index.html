@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5eef8">
+    <meta name="description" content="Jerin Khan is a CSE student and QA tester in Dhaka. Explore her Selenium and pytest automation, web testing projects, and thoughtful approach to quality.">
+    <title>Jerin Khan | QA & Web Testing</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23ead8ef'/%3E%3Cpath d='M14 22Q32 6 50 22v21Q32 58 14 43z' fill='%236f557b'/%3E%3Ccircle cx='24' cy='30' r='8' fill='%23fff7ee'/%3E%3Ccircle cx='40' cy='30' r='8' fill='%23fff7ee'/%3E%3Ccircle cx='24' cy='30' r='3' fill='%233a3044'/%3E%3Ccircle cx='40' cy='30' r='3' fill='%233a3044'/%3E%3Cpath d='M28 41l4 5 4-5z' fill='%23f4ad91'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="site-shell" id="top">
+      <header class="site-header">
+        <a class="wordmark" href="#top" aria-label="Jerin Khan, back to top"><span class="wordmark-initials">JK</span><span>Jerin Khan</span></a>
+        <nav aria-label="Main navigation">
+          <a href="#work">Projects</a>
+          <a href="#toolkit">Toolkit</a>
+          <a href="#about">About me</a>
+          <a href="https://github.com/Jerin022846" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+        </nav>
+        <span class="header-descriptor">QA & WEB TESTING</span>
+      </header>
+
+      <main id="main">
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-copy">
+            <p class="eyebrow"><span class="eyebrow-line" aria-hidden="true"></span> HELLO, I’M JERIN <span class="eyebrow-star" aria-hidden="true">✳</span> DHAKA, BANGLADESH</p>
+            <h1 id="hero-title">Quietly curious.<br><em>Thoroughly testing.</em></h1>
+            <p class="hero-intro">I’m a computer science student and part-time QA tester who enjoys understanding how people use a product, finding the little things that get in their way, and making those journeys more reliable.</p>
+            <div class="hero-actions"><a class="button-primary" href="#work">Explore my projects <span aria-hidden="true">↗</span></a><span class="hero-side-note">Selenium · pytest · thoughtful QA</span></div>
+          </div>
+          <div class="hero-art">
+            <div class="art-frame"><img src="owl-flowers.png" width="1024" height="1536" alt="A gentle illustrated owl perched among pastel flowers"></div>
+            <p class="art-caption">A little owl for the quiet observer in me.</p>
+          </div>
+        </section>
+
+        <section class="intro-strip" aria-label="At a glance"><span>CSE STUDENT</span><span class="strip-separator" aria-hidden="true">✳</span><span>PART-TIME QA TESTER</span><span class="strip-separator" aria-hidden="true">✳</span><span>WEB AUTOMATION LEARNER</span></section>
+
+        <section class="work section-wrap" id="work" aria-labelledby="work-title">
+          <div class="section-heading"><p class="section-kicker">01 / SELECTED WORK</p><div><h2 id="work-title">Projects, with the <em>details</em> included.</h2><p>Each project taught me something different about following a user journey and checking what happens along the way.</p></div></div>
+
+          <article class="case-study case-featured" aria-labelledby="orange-title">
+            <div class="case-header"><span class="case-index">01</span><span class="case-type">AUTOMATION / DEMO HR SYSTEM</span></div>
+            <div class="case-featured-grid">
+              <div class="case-summary"><h3 id="orange-title">OrangeHRM <em>automation</em></h3><p class="case-lead">An end-to-end Selenium and pytest suite for employee records in the OrangeHRM demo PIM module.</p><p>I organized the suite with page objects for login, employee lists, personal details, job details, and shared UI elements. A session fixture handles the browser and login, while explicit waits and assertions check navigation, success messages, and results.</p><div class="tag-list"><span>Python</span><span>Selenium</span><span>pytest</span><span>Page objects</span><span>Explicit waits</span></div></div>
+              <div class="case-flow"><p class="case-flow-title">THE TESTED JOURNEY</p><ol><li><span>01</span>Log in to the demo dashboard</li><li><span>02</span>Add an employee and capture the generated ID</li><li><span>03</span>Search by ID and check the opened record</li><li><span>04</span>Update personal and job details</li><li><span>05</span>Delete with confirmation and verify the record is gone</li></ol><p class="case-note">The add flow also handles a duplicate employee ID by trying a new one.</p></div>
+            </div>
+          </article>
+
+          <div class="case-pair">
+            <article class="case-study case-bracula" aria-labelledby="bracula-title"><div class="case-header"><span class="case-index">02</span><span class="case-type">WEB APP / TEST AUTOMATION</span></div><h3 id="bracula-title">BRACULA</h3><p class="case-lead">Testing the everyday flows of a campus web app.</p><p>I worked with Selenium and pytest around login, feeds, resources, and accommodation. The test files are separated by area, making it easier to reason about each part of the site and repeat checks as the app changes.</p><div class="case-small-details"><h4>Flows I explored</h4><ul><li>Resource uploads and feedback after an action</li><li>Feed posts and comment behavior</li><li>Accommodation listings, filters, favorites, and inquiries</li></ul></div><div class="tag-list"><span>Selenium</span><span>pytest</span><span>WebDriverWait</span><span>User journeys</span></div></article>
+            <article class="case-study case-botberry" aria-labelledby="botberry-title"><div class="case-header"><span class="case-index">03</span><span class="case-type">PRODUCT / MANUAL QA</span></div><h3 id="botberry-title">BotBerry</h3><p class="case-lead">Thinking beyond one screen in a bot creation platform.</p><p>My work included bot and admin-panel testing, Orange ID integration, UI updates, tutorial and video creation, and demo preparation. Seeing these pieces together helped me understand how a user’s first steps connect to the product behind them.</p><div class="case-small-details"><h4>What I focused on</h4><ul><li>Onboarding and bot creation paths</li><li>Admin-panel behavior and product changes</li><li>Clearer demonstrations and guidance for users</li></ul></div><div class="tag-list"><span>Test cases</span><span>Manual QA</span><span>Product thinking</span></div></article>
+          </div>
+        </section>
+
+        <section class="toolkit" id="toolkit" aria-labelledby="toolkit-title"><div class="section-wrap"><div class="section-heading"><p class="section-kicker">02 / MY TOOLKIT</p><div><h2 id="toolkit-title">How I approach <em>quality.</em></h2><p>Tools help me repeat checks. Curiosity helps me decide which checks matter.</p></div></div><div class="toolkit-grid"><div><span class="tool-number">01</span><h3>Follow the path</h3><p>I start with a real task: what a person wants to do, which steps they take, and where confusion or failure could interrupt them.</p></div><div><span class="tool-number">02</span><h3>Check the edges</h3><p>I pay attention to validation, changing page state, filters, confirmation messages, and the smaller details around a happy path.</p></div><div><span class="tool-number">03</span><h3>Make it repeatable</h3><p>I use Python, Selenium, pytest, and explicit waits to turn suitable browser journeys into checks a team can run again.</p></div></div></div></section>
+
+        <section class="about section-wrap" id="about" aria-labelledby="about-title"><div class="about-aside"><p class="section-kicker">03 / A LITTLE ABOUT ME</p><span class="about-asterisk" aria-hidden="true">✳</span></div><div class="about-main"><h2 id="about-title">An observer at heart, <em>a tester by practice.</em></h2><p>I’m a CSE student in Dhaka and I work part-time in quality assurance. I’m naturally introverted, and I like giving myself time to notice patterns, ask careful questions, and understand the details behind a feature.</p><p>I also enjoy drawing, which probably explains why I’m drawn to the visual side of an experience as much as its behavior. Right now I’m building my web automation skills with Selenium and pytest and preparing for the ISTQB exam.</p><div class="about-signature">JERIN KHAN <span aria-hidden="true">✳</span> DHAKA, BANGLADESH</div></div></section>
+      </main>
+      <footer class="site-footer"><span>© <span id="year">2026</span> JERIN KHAN</span><span>MADE WITH CARE FOR THE DETAILS.</span><a href="#top">BACK TO TOP ↑</a></footer>
+    </div>
+    <script src="script.js" defer></script>
+  </body>
+</html>
